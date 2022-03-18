@@ -2,6 +2,7 @@ from tkinter import *  # imports everything from tkinter(classes and constants)
 from tkinter import messagebox  # this is used for pop-ups
 import random
 import pyperclip  # to copy/paste text in/from clipboard
+import json
 
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
@@ -43,21 +44,58 @@ def save():
 	user_name = username_entry.get()
 	pass_word = password_entry.get()
 
-	# pop_ups
+	data_for_save = {
+		web: {
+			"User Name": user_name,
+			"Password": pass_word
+		}
+	}
+
+	# pop_up
 	if len(web) <= 0 or len(user_name) <= 0 or len(pass_word) <= 0:  # tell user if he/she left field unfilled
 		messagebox.showwarning(title="Warning!", message="please fill all the fields first.")
 	else:
-		want_to_save = messagebox.askyesno(title=web, message="Do you want to save password for this site? ")  # ask user -
-		# if they want to save password, returns boolean
-		if want_to_save:
-			# write that data to a .txt file
-			data = open("data.txt", "a")  # "a" stands for append, text will be added to the end of the existing text
-			data.write(f"{web} // {user_name} // {pass_word} \n")
-			data.close()  # file needs to be closed
+		try:
+			with open("data.json", "r") as data:  # "r" stands for read
+				# read (load) data from data.json
+				old_data = json.load(data)
+		except FileNotFoundError:
+			with open("data.json", "w") as data:  # "w" stands for write
+				# write data in json format
+				json.dump(data_for_save, data, indent=4)
+		else:
+			# update data in data.json
+			old_data.update(data_for_save)
 
+			with open("data.json", "w") as data:  # "w" stands for write
+				# write data in json format
+				json.dump(data_for_save, data, indent=4)
+		finally:
 			# delete text from entry fields
 			website_entry.delete(0, END)
 			password_entry.delete(0, END)
+
+
+# ---------------------------- FIND LOGIN AND PASSWORD ------------------------------- #
+def find_password():
+	search_name = website_entry.get()
+	if len(search_name) > 0:  # to catch moments when website entry is empty
+		try:
+			with open("data.json", "r") as data:
+				data_for_search = json.load(data)
+		except FileNotFoundError:
+			messagebox.showinfo(title="Not found", message="File was not found")
+		else:
+			if search_name in data_for_search:
+
+				message = f"User Name:  {data_for_search[search_name]['User Name']}\n" \
+						  f"Password:  {data_for_search[search_name]['Password']}"
+
+				messagebox.showinfo(title=search_name, message=message)
+			else:
+				messagebox.showinfo(title="Oops", message=f"no details for {search_name}")
+	else:
+		messagebox.showwarning(title="Empty Field", message="Fill the site name first!")
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -84,8 +122,8 @@ password_label = Label(text="Password:")
 password_label.grid(column=0, row=3)
 
 # create entries
-website_entry = Entry(width=35)
-website_entry.grid(column=1, row=1, columnspan=2,  sticky="EW")  # "sticky" parameter, the "EW" part is the compass -
+website_entry = Entry(width=21)
+website_entry.grid(column=1, row=1,  sticky="EW")  # "sticky" parameter, the "EW" part is the compass -
 # - directions (E)ast and (W)est and the sticky basically "sticks" the widget to the edges of the column
 website_entry.focus()  # Puts cursor in textbox
 
@@ -103,5 +141,7 @@ gen_password.grid(column=2, row=3)
 add_but = Button(text="Add", width=36, command=save)
 add_but.grid(column=1, row=4, columnspan=2,  sticky="EW")
 
+search_button = Button(text="Search", width=14, command=find_password)  # added after update
+search_button.grid(column=2, row=1)
 
 window.mainloop()
